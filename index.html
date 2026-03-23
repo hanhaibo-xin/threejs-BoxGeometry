@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 旋转立方体</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .info p {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>Three.js 3D 立方体</h1>
+        <p>带有阴影效果的旋转立方体</p>
+    </div>
+    <div id="container"></div>
+
+    <!-- 引入 Three.js 最新稳定版 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    
+    <script>
+        // 1. 场景初始化
+        let scene, camera, renderer, cube;
+        
+        function init() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            // 创建相机（透视相机）
+            // 参数：视场角(FOV)、宽高比、近裁剪面、远裁剪面
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.z = 5; // 将相机向后移动，以便能看到物体
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 防止高DPI屏幕性能问题
+            
+            // 开启阴影映射
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 软阴影，更真实
+            
+            // 将渲染器添加到页面
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // 2. 创建物体 - 立方体
+            // BoxGeometry 参数：宽度、高度、深度
+            const geometry = new THREE.BoxGeometry(2, 2, 2);
+            
+            // 创建材质 - 使用 MeshStandardMaterial 支持光照和阴影
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x4a90e2, // 蓝色
+                metalness: 0.3, // 金属度
+                roughness: 0.4 // 粗糙度
+            });
+            
+            // 创建网格（几何体 + 材质）
+            cube = new THREE.Mesh(geometry, material);
+            
+            // 让立方体投射阴影
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            
+            // 将立方体添加到场景
+            scene.add(cube);
+            
+            // 3. 添加光源
+            // 环境光 - 提供整体照明
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            // 平行光 - 模拟太阳光，产生阴影
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5); // 设置光源位置
+            
+            // 让平行光投射阴影
+            directionalLight.castShadow = true;
+            
+            // 优化阴影质量
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            
+            scene.add(directionalLight);
+            
+            // 4. 添加地面接收阴影
+            const groundGeometry = new THREE.PlaneGeometry(10, 10);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2d3436,
+                roughness: 0.8
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2; // 旋转为水平
+            ground.position.y = -2; // 放置在立方体下方
+            ground.receiveShadow = true; // 地面接收阴影
+            scene.add(ground);
+            
+            // 5. 添加窗口 resize 监听
+            window.addEventListener('resize', onWindowResize);
+            
+            // 6. 开始动画循环
+            animate();
+        }
+        
+        // 窗口大小变化时的自适应处理
+        function onWindowResize() {
+            // 更新相机宽高比
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            
+            // 更新渲染器大小
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // 动画循环
+        function animate() {
+            // 使用 requestAnimationFrame 创建平滑动画
+            requestAnimationFrame(animate);
+            
+            // 让立方体旋转
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.015;
+            
+            // 渲染场景
+            renderer.render(scene, camera);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
